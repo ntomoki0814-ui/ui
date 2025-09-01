@@ -1,139 +1,744 @@
--- NeonUI Example Usage Script
--- This script demonstrates how to use the NeonUI library with tab functionality
+-- NeonUI Library - A unique neon-themed UI library for Roblox
+-- Created with distinctive visual styling and smooth animations
+-- Mobile-optimized version
 
--- Updated to use loadstring format for GitHub loading
-local NeonUI = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ntomoki0814-ui/ui/refs/heads/main/NeonUI.lua"))()
+local NeonUI = {}
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
 
--- Create main window
-local window = NeonUI:CreateWindow("NeonUI Demo", "Showcase of all components with tabs")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
--- Create multiple tabs for different categories
-local mainTab = NeonUI:CreateTab(window, "メイン")
-local playerTab = NeonUI:CreateTab(window, "プレイヤー")
-local visualTab = NeonUI:CreateTab(window, "ビジュアル")
-local settingsTab = NeonUI:CreateTab(window, "設定")
+-- Configuration
+local Config = {
+    Colors = {
+        Primary = Color3.fromRGB(0, 255, 255),      -- Cyan
+        Secondary = Color3.fromRGB(255, 0, 255),    -- Magenta
+        Background = Color3.fromRGB(15, 15, 25),    -- Dark blue
+        Surface = Color3.fromRGB(25, 25, 40),       -- Lighter dark
+        Text = Color3.fromRGB(255, 255, 255),       -- White
+        TextSecondary = Color3.fromRGB(180, 180, 200), -- Light gray
+        Success = Color3.fromRGB(0, 255, 100),      -- Green
+        Warning = Color3.fromRGB(255, 200, 0),      -- Yellow
+        Error = Color3.fromRGB(255, 50, 100)        -- Red
+    },
+    Animations = {
+        Fast = 0.2,
+        Medium = 0.4,
+        Slow = 0.6
+    },
+    -- Adjusted mobile sizes to be proportionally smaller, not just width
+    Mobile = {
+        WindowWidth = 400,
+        WindowHeight = 550,
+        MinButtonHeight = 50,
+        TouchAreaSize = 44,
+        SliderHeight = 70
+    }
+}
 
--- Main Tab Content
-local mainSection = NeonUI:CreateSection(mainTab, "🎮 基本機能")
-mainSection.LayoutOrder = 1
+-- Added mobile detection
+local function IsMobile()
+    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
 
-local infoLabel = NeonUI:CreateLabel(mainTab, "NeonUIへようこそ！ネオンスタイルのモダンなUIライブラリです。")
-infoLabel.LayoutOrder = 2
+-- Utility Functions
+local function CreateGlow(parent, color, size)
+    local glow = Instance.new("ImageLabel")
+    glow.Name = "Glow"
+    glow.Parent = parent
+    glow.BackgroundTransparency = 1
+    glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    glow.ImageColor3 = color or Config.Colors.Primary
+    glow.ImageTransparency = 0.7
+    glow.Size = UDim2.new(1, size or 20, 1, size or 20)
+    glow.Position = UDim2.new(0, -(size or 20)/2, 0, -(size or 20)/2)
+    glow.ZIndex = parent.ZIndex - 1
+    return glow
+end
 
-local testButton = NeonUI:CreateButton(mainTab, "テストボタン", function()
-    print("ボタンがクリックされました！")
-end)
-testButton.LayoutOrder = 3
+local function CreateCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.Parent = parent
+    return corner
+end
 
-local autoFarmToggle = NeonUI:CreateToggle(mainTab, "オートファーム", false, function(state)
-    print("オートファーム:", state and "ON" or "OFF")
-end)
-autoFarmToggle.LayoutOrder = 4
+local function CreateStroke(parent, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Config.Colors.Primary
+    stroke.Thickness = thickness or 2
+    stroke.Parent = parent
+    return stroke
+end
 
--- Player Tab Content
-local playerSection = NeonUI:CreateSection(playerTab, "🏃 プレイヤー設定")
-playerSection.LayoutOrder = 1
+local function AnimateHover(element, hoverColor, normalColor)
+    local connection1, connection2
+    
+    connection1 = element.MouseEnter:Connect(function()
+        TweenService:Create(element, TweenInfo.new(Config.Animations.Fast), {
+            BackgroundColor3 = hoverColor
+        }):Play()
+    end)
+    
+    connection2 = element.MouseLeave:Connect(function()
+        TweenService:Create(element, TweenInfo.new(Config.Animations.Fast), {
+            BackgroundColor3 = normalColor
+        }):Play()
+    end)
+    
+    return {connection1, connection2}
+end
 
-local speedSlider = NeonUI:CreateSlider(playerTab, "��行速度", 16, 100, 16, function(value)
-    print("歩行速度を設定:", value)
-    if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+-- Main Library Functions
+function NeonUI:CreateWindow(title, subtitle)
+    local window = {}
+    
+    -- Main ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NeonUI_" .. title
+    screenGui.Parent = PlayerGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    -- Adjusted sizing to be proportionally smaller from original, not just mobile width
+    local isMobile = IsMobile()
+    local windowWidth = isMobile and Config.Mobile.WindowWidth or 450
+    local windowHeight = isMobile and Config.Mobile.WindowHeight or 500
+    
+    -- Main Frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Parent = screenGui
+    mainFrame.BackgroundColor3 = Config.Colors.Background
+    mainFrame.Size = UDim2.new(0, windowWidth, 0, windowHeight)
+    mainFrame.Position = UDim2.new(0.5, -windowWidth/2, 0.5, -windowHeight/2)
+    mainFrame.BorderSizePixel = 0
+    
+    CreateCorner(mainFrame, 12)
+    CreateStroke(mainFrame, Config.Colors.Primary, 2)
+    CreateGlow(mainFrame, Config.Colors.Primary, 30)
+    
+    -- Mobile-friendly title bar with minimize button
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = mainFrame
+    titleBar.BackgroundColor3 = Config.Colors.Surface
+    titleBar.Size = UDim2.new(1, 0, 0, isMobile and 60 or 50)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.BorderSizePixel = 0
+    
+    CreateCorner(titleBar, 12)
+    
+    -- Title Text
+    local titleText = Instance.new("TextLabel")
+    titleText.Name = "Title"
+    titleText.Parent = titleBar
+    titleText.BackgroundTransparency = 1
+    titleText.Size = UDim2.new(1, -100, 0.6, 0)
+    titleText.Position = UDim2.new(0, 10, 0, 0)
+    titleText.Text = title or "NeonUI Window"
+    titleText.TextColor3 = Config.Colors.Text
+    titleText.TextScaled = true
+    titleText.Font = Enum.Font.GothamBold
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- Subtitle Text
+    local subtitleText = Instance.new("TextLabel")
+    subtitleText.Name = "Subtitle"
+    subtitleText.Parent = titleBar
+    subtitleText.BackgroundTransparency = 1
+    subtitleText.Size = UDim2.new(1, -100, 0.4, 0)
+    subtitleText.Position = UDim2.new(0, 10, 0.6, 0)
+    subtitleText.Text = subtitle or "Powered by NeonUI"
+    subtitleText.TextColor3 = Config.Colors.TextSecondary
+    subtitleText.TextScaled = true
+    subtitleText.Font = Enum.Font.Gotham
+    subtitleText.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- Added minimize button
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Parent = titleBar
+    minimizeButton.BackgroundColor3 = Config.Colors.Warning
+    minimizeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
+    minimizeButton.Position = UDim2.new(1, isMobile and -90 or -80, 0, 10)
+    minimizeButton.Text = "−"
+    minimizeButton.TextColor3 = Config.Colors.Text
+    minimizeButton.TextScaled = true
+    minimizeButton.Font = Enum.Font.GothamBold
+    minimizeButton.BorderSizePixel = 0
+    
+    CreateCorner(minimizeButton, 6)
+    AnimateHover(minimizeButton, Config.Colors.Warning, Config.Colors.Warning)
+    
+    -- Close Button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = titleBar
+    closeButton.BackgroundColor3 = Config.Colors.Error
+    closeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
+    closeButton.Position = UDim2.new(1, isMobile and -45 or -40, 0, 10)
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Config.Colors.Text
+    closeButton.TextScaled = true
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.BorderSizePixel = 0
+    
+    CreateCorner(closeButton, 6)
+    AnimateHover(closeButton, Config.Colors.Error, Config.Colors.Error)
+    
+    -- Added minimize/maximize functionality
+    local isMinimized = false
+    local originalSize = mainFrame.Size
+    
+    minimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        
+        if isMinimized then
+            TweenService:Create(mainFrame, TweenInfo.new(Config.Animations.Medium), {
+                Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
+            }):Play()
+            minimizeButton.Text = "+"
+        else
+            TweenService:Create(mainFrame, TweenInfo.new(Config.Animations.Medium), {
+                Size = originalSize
+            }):Play()
+            minimizeButton.Text = "−"
+        end
+    end)
+    
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+    
+    -- Added tab container frame
+    local tabScrollFrame = Instance.new("ScrollingFrame")
+    tabScrollFrame.Name = "TabScrollFrame"
+    tabScrollFrame.Parent = mainFrame
+    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
+    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
+    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
+    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
+    tabScrollFrame.ScrollBarThickness = 4
+    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    tabScrollFrame.BorderSizePixel = 0
+    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Parent = tabScrollFrame
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Size = UDim2.new(0, 0, 1, 0)
+    tabContainer.Position = UDim2.new(0, 0, 0, 0)
+    
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.Parent = tabContainer
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Padding = UDim.new(0, 2)
+    
+    -- Update canvas size when tabs are added
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabContainer.Size = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 1, 0)
+        tabScrollFrame.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 0, 0)
+    end)
+    
+    -- Modified content frame position to use tabScrollFrame instead of tabContainer
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "Content"
+    contentFrame.Parent = mainFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
+    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
+    contentFrame.ScrollBarThickness = isMobile and 10 or 6
+    contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    contentFrame.BorderSizePixel = 0
+    
+    -- Enhanced dragging for mobile with touch support
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    local function startDrag(input)
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
     end
-end)
-speedSlider.LayoutOrder = 2
-
-local jumpSlider = NeonUI:CreateSlider(playerTab, "ジャンプ力", 50, 200, 50, function(value)
-    print("ジャンプ力を設定:", value)
-    if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = value
-    end
-end)
-jumpSlider.LayoutOrder = 3
-
-local flyToggle = NeonUI:CreateToggle(playerTab, "フライ", false, function(state)
-    print("フライ:", state and "ON" or "OFF")
-    -- フライ機能をここに追加
-end)
-flyToggle.LayoutOrder = 4
-
-local noClipToggle = NeonUI:CreateToggle(playerTab, "ノークリップ", false, function(state)
-    print("ノークリップ:", state and "ON" or "OFF")
-    -- ノークリップ機能をここに追加
-end)
-noClipToggle.LayoutOrder = 5
-
--- Visual Tab Content
-local visualSection = NeonUI:CreateSection(visualTab, "👁️ ビジュアル機能")
-visualSection.LayoutOrder = 1
-
-local espToggle = NeonUI:CreateToggle(visualTab, "ESP", false, function(state)
-    print("ESP:", state and "ON" or "OFF")
-    -- ESP機能をここに追加
-end)
-espToggle.LayoutOrder = 2
-
-local wallhackToggle = NeonUI:CreateToggle(visualTab, "ウォールハック", false, function(state)
-    print("ウォールハック:", state and "ON" or "OFF")
-    -- ウォールハック機能をここに追加
-end)
-wallhackToggle.LayoutOrder = 3
-
-local brightnessSlider = NeonUI:CreateSlider(visualTab, "明度", 0, 10, 1, function(value)
-    print("明度を設定:", value)
-    -- 明度調整をここに追加
-end)
-brightnessSlider.LayoutOrder = 4
-
-local fovSlider = NeonUI:CreateSlider(visualTab, "視野角", 70, 120, 70, function(value)
-    print("視野角を設定:", value)
-    if workspace.CurrentCamera then
-        workspace.CurrentCamera.FieldOfView = value
-    end
-end)
-fovSlider.LayoutOrder = 5
-
--- Settings Tab Content
-local settingsSection = NeonUI:CreateSection(settingsTab, "⚙️ 設定")
-settingsSection.LayoutOrder = 1
-
-local nameInput = NeonUI:CreateTextBox(settingsTab, "名前を入力...", function(text, enterPressed)
-    if enterPressed and text ~= "" then
-        print("名前が入力されました:", text)
-    end
-end)
-nameInput.LayoutOrder = 2
-
-local commandInput = NeonUI:CreateTextBox(settingsTab, "コマンドを入力...", function(text, enterPressed)
-    if enterPressed and text ~= "" then
-        print("コマンドが入力されました:", text)
-        if text:lower() == "hello" or text:lower() == "こんにちは" then
-            print("こんにちは！")
-        elseif text:lower() == "reset" or text:lower() == "リセット" then
-            if game.Players.LocalPlayer.Character then
-                game.Players.LocalPlayer.Character:BreakJoints()
-            end
+    
+    local function updateDrag(input)
+        if dragging then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end
-end)
-commandInput.LayoutOrder = 3
+    
+    local function endDrag()
+        dragging = false
+    end
+    
+    -- Mouse support
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            startDrag(input)
+        end
+    end)
+    
+    -- Touch support
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            startDrag(input)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            updateDrag(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endDrag()
+        end
+    end)
+    
+    -- Updated window properties to use tabScrollFrame
+    window.ContentFrame = contentFrame
+    window.ScreenGui = screenGui
+    window.MainFrame = mainFrame
+    window.TabContainer = tabContainer
+    window.TabScrollFrame = tabScrollFrame
+    window.Tabs = {}
+    window.CurrentTab = nil
+    window.IsMinimized = function() return isMinimized end
+    
+    return window
+end
 
-local statusLabel = NeonUI:CreateLabel(settingsTab, "ステータス: 準備完了", NeonUI.Config.Colors.Success)
-statusLabel.LayoutOrder = 4
+function NeonUI:CreateButton(parent, text, callback)
+    local isMobile = IsMobile()
+    local buttonHeight = isMobile and Config.Mobile.MinButtonHeight or 40
+    
+    local button = Instance.new("TextButton")
+    button.Name = "NeonButton"
+    button.Parent = parent
+    button.BackgroundColor3 = Config.Colors.Surface
+    button.Size = UDim2.new(1, -20, 0, buttonHeight)
+    button.Position = UDim2.new(0, 10, 0, 0)
+    button.Text = text or "Button"
+    button.TextColor3 = Config.Colors.Text
+    button.TextScaled = true
+    button.Font = Enum.Font.GothamBold
+    button.BorderSizePixel = 0
+    
+    CreateCorner(button, 8)
+    CreateStroke(button, Config.Colors.Primary, 2)
+    
+    -- Hover animation
+    AnimateHover(button, Config.Colors.Primary, Config.Colors.Surface)
+    
+    -- Click animation
+    button.MouseButton1Click:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.1), {
+            Size = UDim2.new(1, -25, 0, buttonHeight - 5)
+        }):Play()
+        
+        wait(0.1)
+        
+        TweenService:Create(button, TweenInfo.new(0.1), {
+            Size = UDim2.new(1, -20, 0, buttonHeight)
+        }):Play()
+        
+        if callback then
+            callback()
+        end
+    end)
+    
+    return button
+end
 
-local playerLabel = NeonUI:CreateLabel(settingsTab, "プレイヤー: " .. game.Players.LocalPlayer.Name)
-playerLabel.LayoutOrder = 5
+function NeonUI:CreateToggle(parent, text, defaultState, callback)
+    local isMobile = IsMobile()
+    local toggleHeight = isMobile and 60 or 50
+    
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "ToggleFrame"
+    toggleFrame.Parent = parent
+    toggleFrame.BackgroundColor3 = Config.Colors.Surface
+    toggleFrame.Size = UDim2.new(1, -20, 0, toggleHeight)
+    toggleFrame.Position = UDim2.new(0, 10, 0, 0)
+    toggleFrame.BorderSizePixel = 0
+    
+    CreateCorner(toggleFrame, 8)
+    CreateStroke(toggleFrame, Config.Colors.Primary, 2)
+    
+    local toggleText = Instance.new("TextLabel")
+    toggleText.Name = "ToggleText"
+    toggleText.Parent = toggleFrame
+    toggleText.BackgroundTransparency = 1
+    toggleText.Size = UDim2.new(0.6, 0, 1, 0)
+    toggleText.Position = UDim2.new(0, 15, 0, 0)
+    toggleText.Text = text or "Toggle"
+    toggleText.TextColor3 = Config.Colors.Text
+    toggleText.TextScaled = true
+    toggleText.Font = Enum.Font.Gotham
+    toggleText.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Parent = toggleFrame
+    toggleButton.BackgroundColor3 = defaultState and Config.Colors.Success or Config.Colors.Error
+    toggleButton.Size = UDim2.new(0, isMobile and 80 or 60, 0, isMobile and 40 or 30)
+    toggleButton.Position = UDim2.new(1, isMobile and -90 or -70, 0.5, isMobile and -20 or -15)
+    toggleButton.Text = defaultState and "ON" or "OFF"
+    toggleButton.TextColor3 = Config.Colors.Text
+    toggleButton.TextScaled = true
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.BorderSizePixel = 0
+    
+    CreateCorner(toggleButton, 15)
+    
+    local isToggled = defaultState or false
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        isToggled = not isToggled
+        
+        TweenService:Create(toggleButton, TweenInfo.new(Config.Animations.Fast), {
+            BackgroundColor3 = isToggled and Config.Colors.Success or Config.Colors.Error
+        }):Play()
+        
+        toggleButton.Text = isToggled and "ON" or "OFF"
+        
+        if callback then
+            callback(isToggled)
+        end
+    end)
+    
+    return toggleFrame, isToggled
+end
 
-local saveButton = NeonUI:CreateButton(settingsTab, "設定を保存", function()
-    print("設定が保存されました！")
-    -- 設定保存機能をここに追加
-end)
-saveButton.LayoutOrder = 6
+-- Completely rewritten CreateSlider for mobile touch support
+function NeonUI:CreateSlider(parent, text, min, max, default, callback)
+    local isMobile = IsMobile()
+    local sliderHeight = isMobile and Config.Mobile.SliderHeight or 60
+    
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = "SliderFrame"
+    sliderFrame.Parent = parent
+    sliderFrame.BackgroundColor3 = Config.Colors.Surface
+    sliderFrame.Size = UDim2.new(1, -20, 0, sliderHeight)
+    sliderFrame.Position = UDim2.new(0, 10, 0, 0)
+    sliderFrame.BorderSizePixel = 0
+    
+    CreateCorner(sliderFrame, 8)
+    CreateStroke(sliderFrame, Config.Colors.Primary, 2)
+    
+    local sliderText = Instance.new("TextLabel")
+    sliderText.Name = "SliderText"
+    sliderText.Parent = sliderFrame
+    sliderText.BackgroundTransparency = 1
+    sliderText.Size = UDim2.new(0.6, 0, 0.4, 0)
+    sliderText.Position = UDim2.new(0, 15, 0, 5)
+    sliderText.Text = text or "Slider"
+    sliderText.TextColor3 = Config.Colors.Text
+    sliderText.TextScaled = true
+    sliderText.Font = Enum.Font.Gotham
+    sliderText.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local valueText = Instance.new("TextLabel")
+    valueText.Name = "ValueText"
+    valueText.Parent = sliderFrame
+    valueText.BackgroundTransparency = 1
+    valueText.Size = UDim2.new(0.3, 0, 0.4, 0)
+    valueText.Position = UDim2.new(0.7, 0, 0, 5)
+    valueText.Text = tostring(default or min or 0)
+    valueText.TextColor3 = Config.Colors.Primary
+    valueText.TextScaled = true
+    valueText.Font = Enum.Font.GothamBold
+    valueText.TextXAlignment = Enum.TextXAlignment.Right
+    
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Name = "SliderBar"
+    sliderBar.Parent = sliderFrame
+    sliderBar.BackgroundColor3 = Config.Colors.Background
+    sliderBar.Size = UDim2.new(0.9, 0, 0, isMobile and 12 or 6)
+    sliderBar.Position = UDim2.new(0.05, 0, 0.65, 0)
+    sliderBar.BorderSizePixel = 0
+    
+    CreateCorner(sliderBar, isMobile and 6 or 3)
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Name = "SliderFill"
+    sliderFill.Parent = sliderBar
+    sliderFill.BackgroundColor3 = Config.Colors.Primary
+    sliderFill.Size = UDim2.new(0, 0, 1, 0)
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BorderSizePixel = 0
+    
+    CreateCorner(sliderFill, isMobile and 6 or 3)
+    
+    local sliderKnob = Instance.new("Frame")
+    sliderKnob.Name = "SliderKnob"
+    sliderKnob.Parent = sliderBar
+    sliderKnob.BackgroundColor3 = Config.Colors.Primary
+    local knobSize = isMobile and 24 or 16
+    sliderKnob.Size = UDim2.new(0, knobSize, 0, knobSize)
+    sliderKnob.Position = UDim2.new(0, -knobSize/2, 0.5, -knobSize/2)
+    sliderKnob.BorderSizePixel = 0
+    
+    CreateCorner(sliderKnob, knobSize/2)
+    CreateGlow(sliderKnob, Config.Colors.Primary, 10)
+    
+    local minVal = min or 0
+    local maxVal = max or 100
+    local currentVal = default or minVal
+    
+    local function updateSlider(value)
+        currentVal = math.clamp(value, minVal, maxVal)
+        local percentage = (currentVal - minVal) / (maxVal - minVal)
+        
+        TweenService:Create(sliderFill, TweenInfo.new(Config.Animations.Fast), {
+            Size = UDim2.new(percentage, 0, 1, 0)
+        }):Play()
+        
+        TweenService:Create(sliderKnob, TweenInfo.new(Config.Animations.Fast), {
+            Position = UDim2.new(percentage, -knobSize/2, 0.5, -knobSize/2)
+        }):Play()
+        
+        valueText.Text = tostring(math.floor(currentVal))
+        
+        if callback then
+            callback(currentVal)
+        end
+    end
+    
+    updateSlider(currentVal)
+    
+    local dragging = false
+    
+    local function handleInput(input)
+        local percentage = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+        local value = minVal + (maxVal - minVal) * percentage
+        updateSlider(value)
+    end
+    
+    -- Enhanced input handling for both mouse and touch
+    sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            handleInput(input)
+        end
+    end)
+    
+    sliderKnob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            handleInput(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    return sliderFrame, currentVal
+end
 
-local resetButton = NeonUI:CreateButton(settingsTab, "設定をリセット", function()
-    print("設定がリセットされました！")
-    -- 設定リセット機能をここに追加
-end)
-resetButton.LayoutOrder = 7
+function NeonUI:CreateTextBox(parent, placeholder, callback)
+    local isMobile = IsMobile()
+    local textBoxHeight = isMobile and Config.Mobile.MinButtonHeight or 40
+    
+    local textBox = Instance.new("TextBox")
+    textBox.Name = "NeonTextBox"
+    textBox.Parent = parent
+    textBox.BackgroundColor3 = Config.Colors.Surface
+    textBox.Size = UDim2.new(1, -20, 0, textBoxHeight)
+    textBox.Position = UDim2.new(0, 10, 0, 0)
+    textBox.PlaceholderText = placeholder or "Enter text..."
+    textBox.PlaceholderColor3 = Config.Colors.TextSecondary
+    textBox.Text = ""
+    textBox.TextColor3 = Config.Colors.Text
+    textBox.TextScaled = true
+    textBox.Font = Enum.Font.Gotham
+    textBox.BorderSizePixel = 0
+    textBox.ClearButtonOnFocus = false
+    
+    CreateCorner(textBox, 8)
+    CreateStroke(textBox, Config.Colors.Primary, 2)
+    
+    textBox.FocusLost:Connect(function(enterPressed)
+        if callback then
+            callback(textBox.Text, enterPressed)
+        end
+    end)
+    
+    return textBox
+end
 
-print("NeonUI Demo with tabs loaded successfully!")
-print("タブ機能付きNeonUIデモが正常に読み込まれました！")
+function NeonUI:CreateLabel(parent, text, color)
+    local isMobile = IsMobile()
+    local labelHeight = isMobile and 40 or 30
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "NeonLabel"
+    label.Parent = parent
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -20, 0, labelHeight)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Text = text or "Label"
+    label.TextColor3 = color or Config.Colors.Text
+    label.TextScaled = true
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    return label
+end
+
+function NeonUI:CreateSection(parent, title)
+    local isMobile = IsMobile()
+    local sectionHeight = isMobile and 50 or 40
+    
+    local section = Instance.new("Frame")
+    section.Name = "Section"
+    section.Parent = parent
+    section.BackgroundTransparency = 1
+    section.Size = UDim2.new(1, 0, 0, sectionHeight)
+    section.Position = UDim2.new(0, 0, 0, 0)
+    
+    local sectionTitle = Instance.new("TextLabel")
+    sectionTitle.Name = "SectionTitle"
+    sectionTitle.Parent = section
+    sectionTitle.BackgroundTransparency = 1
+    sectionTitle.Size = UDim2.new(1, -20, 1, 0)
+    sectionTitle.Position = UDim2.new(0, 10, 0, 0)
+    sectionTitle.Text = title or "Section"
+    sectionTitle.TextColor3 = Config.Colors.Primary
+    sectionTitle.TextScaled = true
+    sectionTitle.Font = Enum.Font.GothamBold
+    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local divider = Instance.new("Frame")
+    divider.Name = "Divider"
+    divider.Parent = section
+    divider.BackgroundColor3 = Config.Colors.Primary
+    divider.Size = UDim2.new(1, -20, 0, 2)
+    divider.Position = UDim2.new(0, 10, 1, -5)
+    divider.BorderSizePixel = 0
+    
+    CreateCorner(divider, 1)
+    
+    return section
+end
+
+-- Auto-layout system
+function NeonUI:AutoLayout(parent)
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = parent
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    
+    return layout
+end
+
+-- Updated CreateTab function for mobile-friendly tab buttons
+function NeonUI:CreateTab(window, tabName)
+    if not window.TabContainer then
+        error("Window does not support tabs")
+    end
+    
+    local isMobile = IsMobile()
+    local tabWidth = isMobile and 120 or 100
+    
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = "Tab_" .. tabName
+    tabButton.Parent = window.TabContainer
+    tabButton.BackgroundColor3 = Config.Colors.Background
+    tabButton.Size = UDim2.new(0, tabWidth, 1, 0)
+    tabButton.Text = tabName
+    tabButton.TextColor3 = Config.Colors.TextSecondary
+    tabButton.TextScaled = true
+    tabButton.Font = Enum.Font.Gotham
+    tabButton.BorderSizePixel = 0
+    
+    CreateCorner(tabButton, 6)
+    CreateStroke(tabButton, Config.Colors.Primary, 1)
+    
+    -- Create tab content frame
+    local tabContent = Instance.new("ScrollingFrame")
+    tabContent.Name = "TabContent_" .. tabName
+    tabContent.Parent = window.ContentFrame
+    tabContent.BackgroundTransparency = 1
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.Position = UDim2.new(0, 0, 0, 0)
+    tabContent.ScrollBarThickness = isMobile and 10 or 6
+    tabContent.ScrollBarImageColor3 = Config.Colors.Primary
+    tabContent.BorderSizePixel = 0
+    tabContent.Visible = false
+    
+    -- Add auto-layout to tab content
+    self:AutoLayout(tabContent)
+    
+    -- Store tab information
+    local tab = {
+        Button = tabButton,
+        Content = tabContent,
+        Name = tabName,
+        Active = false
+    }
+    
+    window.Tabs[tabName] = tab
+    
+    -- Tab click functionality
+    tabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(window, tabName)
+    end)
+    
+    -- If this is the first tab, make it active
+    if not window.CurrentTab then
+        self:SwitchTab(window, tabName)
+    end
+    
+    return tabContent
+end
+
+-- Added SwitchTab function to handle tab switching
+function NeonUI:SwitchTab(window, tabName)
+    if not window.Tabs[tabName] then
+        return
+    end
+    
+    -- Hide all tabs and reset button colors
+    for name, tab in pairs(window.Tabs) do
+        tab.Content.Visible = false
+        tab.Active = false
+        TweenService:Create(tab.Button, TweenInfo.new(Config.Animations.Fast), {
+            BackgroundColor3 = Config.Colors.Background,
+            TextColor3 = Config.Colors.TextSecondary
+        }):Play()
+    end
+    
+    -- Show selected tab and highlight button
+    local selectedTab = window.Tabs[tabName]
+    selectedTab.Content.Visible = true
+    selectedTab.Active = true
+    window.CurrentTab = tabName
+    
+    TweenService:Create(selectedTab.Button, TweenInfo.new(Config.Animations.Fast), {
+        BackgroundColor3 = Config.Colors.Primary,
+        TextColor3 = Config.Colors.Text
+    }):Play()
+end
+
+-- Added Config to exports for external access
+NeonUI.Config = Config
+
+return NeonUI
