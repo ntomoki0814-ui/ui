@@ -29,10 +29,10 @@ local Config = {
         Medium = 0.4,
         Slow = 0.6
     },
-    -- Mobile-friendly sizes
+    -- Adjusted mobile sizes to be proportionally smaller, not just width
     Mobile = {
-        WindowWidth = 320,
-        WindowHeight = 480,
+        WindowWidth = 400,
+        WindowHeight = 550,
         MinButtonHeight = 50,
         TouchAreaSize = 44,
         SliderHeight = 70
@@ -102,10 +102,10 @@ function NeonUI:CreateWindow(title, subtitle)
     screenGui.Parent = PlayerGui
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Mobile-responsive main frame sizing
+    -- Adjusted sizing to be proportionally smaller from original, not just mobile width
     local isMobile = IsMobile()
-    local windowWidth = isMobile and Config.Mobile.WindowWidth or 500
-    local windowHeight = isMobile and Config.Mobile.WindowHeight or 400
+    local windowWidth = isMobile and Config.Mobile.WindowWidth or 450
+    local windowHeight = isMobile and Config.Mobile.WindowHeight or 500
     
     -- Main Frame
     local mainFrame = Instance.new("Frame")
@@ -214,13 +214,24 @@ function NeonUI:CreateWindow(title, subtitle)
     end)
     
     -- Added tab container frame
+    local tabScrollFrame = Instance.new("ScrollingFrame")
+    tabScrollFrame.Name = "TabScrollFrame"
+    tabScrollFrame.Parent = mainFrame
+    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
+    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
+    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
+    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
+    tabScrollFrame.ScrollBarThickness = 4
+    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    tabScrollFrame.BorderSizePixel = 0
+    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
-    tabContainer.Parent = mainFrame
-    tabContainer.BackgroundColor3 = Config.Colors.Surface
-    tabContainer.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
-    tabContainer.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
-    tabContainer.BorderSizePixel = 0
+    tabContainer.Parent = tabScrollFrame
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Size = UDim2.new(0, 0, 1, 0)
+    tabContainer.Position = UDim2.new(0, 0, 0, 0)
     
     local tabLayout = Instance.new("UIListLayout")
     tabLayout.Parent = tabContainer
@@ -228,13 +239,19 @@ function NeonUI:CreateWindow(title, subtitle)
     tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
     tabLayout.Padding = UDim.new(0, 2)
     
-    -- Modified content frame position and size to accommodate tabs
+    -- Update canvas size when tabs are added
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabContainer.Size = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 1, 0)
+        tabScrollFrame.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 0, 0)
+    end)
+    
+    -- Modified content frame position to use tabScrollFrame instead of tabContainer
     local contentFrame = Instance.new("ScrollingFrame")
     contentFrame.Name = "Content"
     contentFrame.Parent = mainFrame
     contentFrame.BackgroundTransparency = 1
-    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabContainer.Size.Y.Offset + 20))
-    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabContainer.Size.Y.Offset + 10)
+    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
+    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
     contentFrame.ScrollBarThickness = isMobile and 10 or 6
     contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
     contentFrame.BorderSizePixel = 0
@@ -287,11 +304,12 @@ function NeonUI:CreateWindow(title, subtitle)
         end
     end)
     
-    -- Added tab system properties and methods
+    -- Updated window properties to use tabScrollFrame
     window.ContentFrame = contentFrame
     window.ScreenGui = screenGui
     window.MainFrame = mainFrame
     window.TabContainer = tabContainer
+    window.TabScrollFrame = tabScrollFrame
     window.Tabs = {}
     window.CurrentTab = nil
     window.IsMinimized = function() return isMinimized end
