@@ -207,33 +207,7 @@ function NeonUI:CreateWindow(title, subtitle)
     local isMinimized = false
     local originalSize = mainFrame.Size
     
-    minimizeButton.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        
-        if isMinimized then
-            -- Hide tab scroll frame and content when minimized
-            tabScrollFrame.Visible = false
-            contentFrame.Visible = false
-            mainFrame.Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
-            minimizeButton.Text = "+"
-        else
-            -- Show tab scroll frame and content when maximized
-            tabScrollFrame.Visible = true
-            contentFrame.Visible = true
-            mainFrame.Size = originalSize
-            minimizeButton.Text = "−"
-        end
-    end)
-    
-    closeButton.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-    
-    -- Fixed window dragging functionality
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
+    -- タイトルバーのドラッグ処理
     titleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -246,12 +220,12 @@ function NeonUI:CreateWindow(title, subtitle)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            
-            -- Keep window within screen bounds
+
+            -- ウィンドウが画面内に収まるように位置を制限
             local screenSize = workspace.CurrentCamera.ViewportSize
-            local clampedX = math.max(0, math.min(newPos.X.Offset, screenSize.X - windowWidth))
-            local clampedY = math.max(0, math.min(newPos.Y.Offset, screenSize.Y - windowHeight))
-            
+            local clampedX = math.max(0, math.min(newPos.X.Offset, screenSize.X - mainFrame.Size.X.Offset))
+            local clampedY = math.max(0, math.min(newPos.Y.Offset, screenSize.Y - mainFrame.Size.Y.Offset))
+
             mainFrame.Position = UDim2.new(0, clampedX, 0, clampedY)
         end
     end)
@@ -262,94 +236,27 @@ function NeonUI:CreateWindow(title, subtitle)
         end
     end)
     
-    -- Added tab container frame
-    local tabScrollFrame = Instance.new("ScrollingFrame")
-    tabScrollFrame.Name = "TabScrollFrame"
-    tabScrollFrame.Parent = mainFrame
-    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
-    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
-    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
-    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
-    tabScrollFrame.ScrollBarThickness = isMobile and 12 or 6
-    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
-    tabScrollFrame.BorderSizePixel = 0
-    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
-    tabScrollFrame.ScrollingEnabled = true
-    tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.Never  -- Removed elastic behavior for smoother scrolling
-    tabScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.X
-    
-    -- Improved mobile scrolling properties for real-time smooth scrolling
-    if isMobile then
-        tabScrollFrame.ScrollBarImageTransparency = 0.2
-        tabScrollFrame.TopImage = ""
-        tabScrollFrame.BottomImage = ""
-        tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-        tabScrollFrame.ScrollingEnabled = true
-        tabScrollFrame.Active = true
-        tabScrollFrame.Selectable = true
-    end
-    
-    local tabContainer = Instance.new("Frame")
-    tabContainer.Name = "TabContainer"
-    tabContainer.Parent = tabScrollFrame
-    tabContainer.BackgroundTransparency = 1
-    tabContainer.Size = UDim2.new(0, 0, 1, 0)
-    tabContainer.Position = UDim2.new(0, 0, 0, 0)
-    
-    local tabLayout = Instance.new("UIListLayout")
-    tabLayout.Parent = tabContainer
-    tabLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    tabLayout.Padding = UDim.new(0, 2)
-    
-    -- Improved canvas size update with immediate scrolling response
-    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        local contentWidth = tabLayout.AbsoluteContentSize.X + 10  -- Add padding
-        tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
-        tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
-        
-        -- Immediate scrolling update without wait()
-        tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
-        
-        -- Ensure scrollbar is visible when needed
-        if contentWidth > tabScrollFrame.AbsoluteSize.X then
-            tabScrollFrame.ScrollBarImageTransparency = isMobile and 0.2 or 0.4
-        else
-            tabScrollFrame.ScrollBarImageTransparency = 1
-        end
-    end)
-    
-    -- Modified content frame position to use tabScrollFrame instead of tabContainer
-    local contentFrame = Instance.new("ScrollingFrame")
-    contentFrame.Name = "Content"
-    contentFrame.Parent = mainFrame
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
-    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
-    contentFrame.ScrollBarThickness = isMobile and 10 or 6
-    contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
-    contentFrame.BorderSizePixel = 0
-    
-    -- Fixed minimize functionality to properly hide/show tabs and content
-    local isMinimized = false
-    local originalSize = mainFrame.Size
-    
+    -- 最小化ボタンのクリック処理
     minimizeButton.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
-        
+
         if isMinimized then
-            -- Hide tab scroll frame and content when minimized
+            -- タブとコンテンツを非表示にする
             tabScrollFrame.Visible = false
             contentFrame.Visible = false
             mainFrame.Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
             minimizeButton.Text = "+"
         else
-            -- Show tab scroll frame and content when maximized
+            -- タブとコンテンツを再表示する
             tabScrollFrame.Visible = true
             contentFrame.Visible = true
             mainFrame.Size = originalSize
             minimizeButton.Text = "−"
         end
+    end)
+    
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
     end)
     
     -- Added tab container frame
