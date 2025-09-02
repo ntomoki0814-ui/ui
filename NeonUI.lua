@@ -149,8 +149,10 @@ function NeonUI:CreateWindow(title, subtitle)
     
     CreateCorner(mainFrame, 12)  -- Rounded corners for main frame glow
     CreateStroke(mainFrame, Config.Colors.Primary, 2)
-    CreateGlow(mainFrame, Config.Colors.Primary, 30)
-    
+    local mainGlow = CreateGlow(mainFrame, Config.Colors.Primary, 30)
+    -- Added rounded corners to the glow effect
+    CreateCorner(mainGlow, 12)
+
     -- Mobile-friendly title bar with minimize button
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
@@ -195,7 +197,7 @@ function NeonUI:CreateWindow(title, subtitle)
     minimizeButton.BackgroundColor3 = Config.Colors.Primary
     minimizeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
     minimizeButton.Position = UDim2.new(1, isMobile and -90 or -80, 0, 10)
-    minimizeButton.Text = "−"
+    minimizeButton.Text = "��"
     minimizeButton.TextColor3 = Config.Colors.Text
     minimizeButton.TextScaled = true
     minimizeButton.Font = Enum.Font.GothamBold
@@ -340,12 +342,12 @@ function NeonUI:CreateWindow(title, subtitle)
             local newX = startPos.X.Offset + delta.X
             local newY = startPos.Y.Offset + delta.Y
             
-            -- Fixed bounds checking to allow proper vertical movement
+            -- Fixed bounds checking to use same relaxed movement for both minimized and expanded states
             local screenSize = workspace.CurrentCamera.ViewportSize
             local currentWindowWidth = mainFrame.AbsoluteSize.X
             local currentWindowHeight = mainFrame.AbsoluteSize.Y
             
-            -- Allow more natural movement - only prevent window from going completely off-screen
+            -- Allow more natural movement for both states - only prevent window from going completely off-screen
             local minX = -currentWindowWidth + 100  -- Allow most of window to go off left edge
             local maxX = screenSize.X - 100  -- Allow most of window to go off right edge
             local minY = -currentWindowHeight + 60   -- Keep title bar visible when going up
