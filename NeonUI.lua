@@ -169,6 +169,84 @@ function NeonUI:CreateWindow(title, subtitle)
     subtitleText.Font = Enum.Font.Gotham
     subtitleText.TextXAlignment = Enum.TextXAlignment.Left
     
+    -- Added tab container frame
+    local tabScrollFrame = Instance.new("ScrollingFrame")
+    tabScrollFrame.Name = "TabScrollFrame"
+    tabScrollFrame.Parent = mainFrame
+    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
+    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
+    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
+    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
+    tabScrollFrame.ScrollBarThickness = isMobile and 12 or 6
+    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    tabScrollFrame.BorderSizePixel = 0
+    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    tabScrollFrame.ScrollingEnabled = true
+    tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+    tabScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.X
+    
+    -- Improved mobile scrolling properties
+    if isMobile then
+        tabScrollFrame.ScrollBarImageTransparency = 0.2
+        tabScrollFrame.TopImage = ""
+        tabScrollFrame.BottomImage = ""
+        tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        -- Enable touch scrolling
+        tabScrollFrame.TouchPan = true
+    end
+    
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Parent = tabScrollFrame
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Size = UDim2.new(0, 0, 1, 0)
+    tabContainer.Position = UDim2.new(0, 0, 0, 0)
+    
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.Parent = tabContainer
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Padding = UDim.new(0, 2)
+    
+    -- Improved canvas size update with better scrolling behavior
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        local contentWidth = tabLayout.AbsoluteContentSize.X + 10  -- Add padding
+        tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
+        tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
+        
+        -- Force scrolling update
+        wait()
+        tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
+        
+        -- Ensure scrollbar is visible when needed
+        if contentWidth > tabScrollFrame.AbsoluteSize.X then
+            tabScrollFrame.ScrollBarImageTransparency = isMobile and 0.2 or 0.4
+        else
+            tabScrollFrame.ScrollBarImageTransparency = 1
+        end
+    end)
+    
+    -- Modified content frame position to use tabScrollFrame instead of tabContainer
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "Content"
+    contentFrame.Parent = mainFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
+    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
+    contentFrame.ScrollBarThickness = isMobile and 10 or 6
+    contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    contentFrame.BorderSizePixel = 0
+    
+    -- Updated window properties to use tabScrollFrame
+    window.ContentFrame = contentFrame
+    window.ScreenGui = screenGui
+    window.MainFrame = mainFrame
+    window.TabContainer = tabContainer
+    window.TabScrollFrame = tabScrollFrame
+    window.Tabs = {}
+    window.CurrentTab = nil
+    window.IsMinimized = function() return isMinimized end
+    
     -- Updated minimize button colors to match neon theme
     local minimizeButton = Instance.new("TextButton")
     minimizeButton.Name = "MinimizeButton"
@@ -234,132 +312,6 @@ function NeonUI:CreateWindow(title, subtitle)
     closeButton.MouseButton1Click:Connect(function()
         screenGui:Destroy()
     end)
-    
-    -- Added tab container frame
-    local tabScrollFrame = Instance.new("ScrollingFrame")
-    tabScrollFrame.Name = "TabScrollFrame"
-    tabScrollFrame.Parent = mainFrame
-    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
-    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
-    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
-    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
-    tabScrollFrame.ScrollBarThickness = isMobile and 12 or 6
-    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
-    tabScrollFrame.BorderSizePixel = 0
-    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
-    tabScrollFrame.ScrollingEnabled = true  -- Explicitly enable scrolling
-    tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable  -- Better mobile scrolling behavior
-    tabScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.X  -- Automatic canvas sizing
-    
-    -- Improved mobile scrolling properties
-    if isMobile then
-        tabScrollFrame.ScrollBarImageTransparency = 0.2
-        tabScrollFrame.TopImage = ""
-        tabScrollFrame.BottomImage = ""
-        tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-        -- Enable touch scrolling
-        tabScrollFrame.TouchPan = true
-    end
-    
-    local tabContainer = Instance.new("Frame")
-    tabContainer.Name = "TabContainer"
-    tabContainer.Parent = tabScrollFrame
-    tabContainer.BackgroundTransparency = 1
-    tabContainer.Size = UDim2.new(0, 0, 1, 0)
-    tabContainer.Position = UDim2.new(0, 0, 0, 0)
-    
-    local tabLayout = Instance.new("UIListLayout")
-    tabLayout.Parent = tabContainer
-    tabLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    tabLayout.Padding = UDim.new(0, 2)
-    
-    -- Improved canvas size update with better scrolling behavior
-    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        local contentWidth = tabLayout.AbsoluteContentSize.X + 10  -- Add padding
-        tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
-        tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
-        
-        -- Force scrolling update
-        wait()
-        tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
-        
-        -- Ensure scrollbar is visible when needed
-        if contentWidth > tabScrollFrame.AbsoluteSize.X then
-            tabScrollFrame.ScrollBarImageTransparency = isMobile and 0.2 or 0.4
-        else
-            tabScrollFrame.ScrollBarImageTransparency = 1
-        end
-    end)
-    
-    -- Modified content frame position to use tabScrollFrame instead of tabContainer
-    local contentFrame = Instance.new("ScrollingFrame")
-    contentFrame.Name = "Content"
-    contentFrame.Parent = mainFrame
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
-    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
-    contentFrame.ScrollBarThickness = isMobile and 10 or 6
-    contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
-    contentFrame.BorderSizePixel = 0
-    
-    -- Enhanced dragging for mobile with touch support
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    local function startDrag(input)
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-    end
-    
-    local function updateDrag(input)
-        if dragging then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end
-    
-    local function endDrag()
-        dragging = false
-    end
-    
-    -- Mouse support
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            startDrag(input)
-        end
-    end)
-    
-    -- Touch support
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            startDrag(input)
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            updateDrag(input)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            endDrag()
-        end
-    end)
-    
-    -- Updated window properties to use tabScrollFrame
-    window.ContentFrame = contentFrame
-    window.ScreenGui = screenGui
-    window.MainFrame = mainFrame
-    window.TabContainer = tabContainer
-    window.TabScrollFrame = tabScrollFrame
-    window.Tabs = {}
-    window.CurrentTab = nil
-    window.IsMinimized = function() return isMinimized end
     
     return window
 end
