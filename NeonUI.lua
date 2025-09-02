@@ -212,10 +212,14 @@ function NeonUI:CreateWindow(title, subtitle)
         
         if isMinimized then
             -- Hide tab scroll frame and content when minimized
+            tabScrollFrame.Visible = false
+            contentFrame.Visible = false
             mainFrame.Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
             minimizeButton.Text = "+"
         else
             -- Show tab scroll frame and content when maximized
+            tabScrollFrame.Visible = true
+            contentFrame.Visible = true
             mainFrame.Size = originalSize
             minimizeButton.Text = "−"
         end
@@ -320,8 +324,8 @@ function NeonUI:CreateWindow(title, subtitle)
     contentFrame.Name = "Content"
     contentFrame.Parent = mainFrame
     contentFrame.BackgroundTransparency = 1
-    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + 20))
-    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + 10)
+    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
+    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
     contentFrame.ScrollBarThickness = isMobile and 10 or 6
     contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
     contentFrame.BorderSizePixel = 0
