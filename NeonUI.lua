@@ -330,7 +330,97 @@ function NeonUI:CreateWindow(title, subtitle)
     contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
     contentFrame.BorderSizePixel = 0
     
-    -- Updated window properties to use tabScrollFrame
+    -- Fixed minimize functionality to properly hide/show tabs and content
+    local isMinimized = false
+    local originalSize = mainFrame.Size
+    
+    minimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        
+        if isMinimized then
+            -- Hide tab scroll frame and content when minimized
+            tabScrollFrame.Visible = false
+            contentFrame.Visible = false
+            mainFrame.Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
+            minimizeButton.Text = "+"
+        else
+            -- Show tab scroll frame and content when maximized
+            tabScrollFrame.Visible = true
+            contentFrame.Visible = true
+            mainFrame.Size = originalSize
+            minimizeButton.Text = "−"
+        end
+    end)
+    
+    -- Added tab container frame
+    local tabScrollFrame = Instance.new("ScrollingFrame")
+    tabScrollFrame.Name = "TabScrollFrame"
+    tabScrollFrame.Parent = mainFrame
+    tabScrollFrame.BackgroundColor3 = Config.Colors.Surface
+    tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
+    tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
+    tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
+    tabScrollFrame.ScrollBarThickness = isMobile and 12 or 6
+    tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    tabScrollFrame.BorderSizePixel = 0
+    tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    tabScrollFrame.ScrollingEnabled = true
+    tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.Never  -- Removed elastic behavior for smoother scrolling
+    tabScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.X
+    
+    -- Improved mobile scrolling properties for real-time smooth scrolling
+    if isMobile then
+        tabScrollFrame.ScrollBarImageTransparency = 0.2
+        tabScrollFrame.TopImage = ""
+        tabScrollFrame.BottomImage = ""
+        tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        tabScrollFrame.ScrollingEnabled = true
+        tabScrollFrame.Active = true
+        tabScrollFrame.Selectable = true
+    end
+    
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Parent = tabScrollFrame
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.Size = UDim2.new(0, 0, 1, 0)
+    tabContainer.Position = UDim2.new(0, 0, 0, 0)
+    
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.Parent = tabContainer
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Padding = UDim.new(0, 2)
+    
+    -- Improved canvas size update with immediate scrolling response
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        local contentWidth = tabLayout.AbsoluteContentSize.X + 10  -- Add padding
+        tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
+        tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
+        
+        -- Immediate scrolling update without wait()
+        tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
+        
+        -- Ensure scrollbar is visible when needed
+        if contentWidth > tabScrollFrame.AbsoluteSize.X then
+            tabScrollFrame.ScrollBarImageTransparency = isMobile and 0.2 or 0.4
+        else
+            tabScrollFrame.ScrollBarImageTransparency = 1
+        end
+    end)
+    
+    -- Modified content frame position to use tabScrollFrame instead of tabContainer
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "Content"
+    contentFrame.Parent = mainFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Size = UDim2.new(1, -20, 1, -(titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 20))
+    contentFrame.Position = UDim2.new(0, 10, 0, titleBar.Size.Y.Offset + tabScrollFrame.Size.Y.Offset + 10)
+    contentFrame.ScrollBarThickness = isMobile and 10 or 6
+    contentFrame.ScrollBarImageColor3 = Config.Colors.Primary
+    contentFrame.BorderSizePixel = 0
+    
+    -- Store window properties
     window.ContentFrame = contentFrame
     window.ScreenGui = screenGui
     window.MainFrame = mainFrame
