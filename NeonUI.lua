@@ -191,8 +191,7 @@ function NeonUI:CreateWindow(title, subtitle)
         tabScrollFrame.TopImage = ""
         tabScrollFrame.BottomImage = ""
         tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-        -- Enable touch scrolling
-        tabScrollFrame.TouchPan = true
+        -- Enable touch scrolling is handled automatically by ScrollingFrame
     end
     
     local tabContainer = Instance.new("Frame")
