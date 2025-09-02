@@ -169,11 +169,11 @@ function NeonUI:CreateWindow(title, subtitle)
     subtitleText.Font = Enum.Font.Gotham
     subtitleText.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Added minimize button
+    -- Updated minimize button colors to match neon theme
     local minimizeButton = Instance.new("TextButton")
     minimizeButton.Name = "MinimizeButton"
     minimizeButton.Parent = titleBar
-    minimizeButton.BackgroundColor3 = Config.Colors.Warning
+    minimizeButton.BackgroundColor3 = Config.Colors.Secondary  -- Changed to magenta neon color
     minimizeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
     minimizeButton.Position = UDim2.new(1, isMobile and -90 or -80, 0, 10)
     minimizeButton.Text = "−"
@@ -183,13 +183,14 @@ function NeonUI:CreateWindow(title, subtitle)
     minimizeButton.BorderSizePixel = 0
     
     CreateCorner(minimizeButton, 6)
-    AnimateHover(minimizeButton, Config.Colors.Warning, Config.Colors.Warning)
+    CreateStroke(minimizeButton, Config.Colors.Secondary, 2)  -- Added neon stroke
+    AnimateHover(minimizeButton, Color3.fromRGB(200, 0, 200), Config.Colors.Secondary)  -- Darker magenta on hover
     
     -- Close Button
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Parent = titleBar
-    closeButton.BackgroundColor3 = Config.Colors.Error
+    closeButton.BackgroundColor3 = Config.Colors.Primary  -- Changed to cyan neon color
     closeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
     closeButton.Position = UDim2.new(1, isMobile and -45 or -40, 0, 10)
     closeButton.Text = "×"
@@ -199,7 +200,8 @@ function NeonUI:CreateWindow(title, subtitle)
     closeButton.BorderSizePixel = 0
     
     CreateCorner(closeButton, 6)
-    AnimateHover(closeButton, Config.Colors.Error, Config.Colors.Error)
+    CreateStroke(closeButton, Config.Colors.Primary, 2)  -- Added neon stroke
+    AnimateHover(closeButton, Color3.fromRGB(0, 200, 200), Config.Colors.Primary)  -- Darker cyan on hover
     
     -- Added minimize/maximize functionality
     local isMinimized = false
@@ -209,11 +211,19 @@ function NeonUI:CreateWindow(title, subtitle)
         isMinimized = not isMinimized
         
         if isMinimized then
+            -- Hide tab scroll frame and content when minimized
+            tabScrollFrame.Visible = false
+            contentFrame.Visible = false
+            
             TweenService:Create(mainFrame, TweenInfo.new(Config.Animations.Medium), {
                 Size = UDim2.new(0, windowWidth, 0, titleBar.Size.Y.Offset)
             }):Play()
             minimizeButton.Text = "+"
         else
+            -- Show tab scroll frame and content when maximized
+            tabScrollFrame.Visible = true
+            contentFrame.Visible = true
+            
             TweenService:Create(mainFrame, TweenInfo.new(Config.Animations.Medium), {
                 Size = originalSize
             }):Play()
@@ -233,19 +243,22 @@ function NeonUI:CreateWindow(title, subtitle)
     tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
     tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
     tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
-    tabScrollFrame.ScrollBarThickness = isMobile and 8 or 4  -- Thicker scrollbar for mobile
+    tabScrollFrame.ScrollBarThickness = isMobile and 12 or 6
     tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
     tabScrollFrame.BorderSizePixel = 0
     tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
     tabScrollFrame.ScrollingEnabled = true  -- Explicitly enable scrolling
     tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable  -- Better mobile scrolling behavior
+    tabScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.X  -- Automatic canvas sizing
     
-    -- Added mobile-specific scroll properties
+    -- Improved mobile scrolling properties
     if isMobile then
-        tabScrollFrame.ScrollBarImageTransparency = 0.3  -- More visible on mobile
-        tabScrollFrame.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-        tabScrollFrame.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        tabScrollFrame.ScrollBarImageTransparency = 0.2
+        tabScrollFrame.TopImage = ""
+        tabScrollFrame.BottomImage = ""
         tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        -- Enable touch scrolling
+        tabScrollFrame.TouchPan = true
     end
     
     local tabContainer = Instance.new("Frame")
@@ -261,14 +274,22 @@ function NeonUI:CreateWindow(title, subtitle)
     tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
     tabLayout.Padding = UDim.new(0, 2)
     
-    -- Enhanced canvas size update with proper scrolling
+    -- Improved canvas size update with better scrolling behavior
     tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        local contentWidth = tabLayout.AbsoluteContentSize.X
+        local contentWidth = tabLayout.AbsoluteContentSize.X + 10  -- Add padding
         tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
         tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
         
-        -- Auto-enable scrolling when content exceeds frame width
+        -- Force scrolling update
+        wait()
         tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
+        
+        -- Ensure scrollbar is visible when needed
+        if contentWidth > tabScrollFrame.AbsoluteSize.X then
+            tabScrollFrame.ScrollBarImageTransparency = isMobile and 0.2 or 0.4
+        else
+            tabScrollFrame.ScrollBarImageTransparency = 1
+        end
     end)
     
     -- Modified content frame position to use tabScrollFrame instead of tabContainer
@@ -728,21 +749,40 @@ function NeonUI:CreateTab(window, tabName)
     
     window.Tabs[tabName] = tab
     
-    -- Enhanced tab click functionality with mobile touch support
+    -- Enhanced tab click functionality with improved auto-scroll
     local function switchToTab()
         self:SwitchTab(window, tabName)
         
-        -- Auto-scroll to show active tab on mobile
-        if isMobile and window.TabScrollFrame then
-            local tabPosition = tabButton.AbsolutePosition.X - window.TabScrollFrame.AbsolutePosition.X
+        -- Improved auto-scroll to show active tab
+        if window.TabScrollFrame and window.TabScrollFrame.ScrollingEnabled then
+            wait(0.1)  -- Small delay to ensure layout is updated
+            
+            local tabAbsolutePos = tabButton.AbsolutePosition.X
+            local scrollFrameAbsolutePos = window.TabScrollFrame.AbsolutePosition.X
+            local tabRelativePos = tabAbsolutePos - scrollFrameAbsolutePos
             local scrollFrameWidth = window.TabScrollFrame.AbsoluteSize.X
             local tabWidth = tabButton.AbsoluteSize.X
             
-            -- Calculate target scroll position to center the tab
-            local targetScroll = tabPosition - (scrollFrameWidth / 2) + (tabWidth / 2)
-            targetScroll = math.max(0, math.min(targetScroll, window.TabScrollFrame.CanvasSize.X.Offset - scrollFrameWidth))
+            -- Calculate optimal scroll position
+            local currentCanvasPos = window.TabScrollFrame.CanvasPosition.X
+            local targetScroll = currentCanvasPos
             
-            TweenService:Create(window.TabScrollFrame, TweenInfo.new(Config.Animations.Medium), {
+            -- If tab is cut off on the right
+            if tabRelativePos + tabWidth > scrollFrameWidth then
+                targetScroll = currentCanvasPos + (tabRelativePos + tabWidth - scrollFrameWidth) + 20
+            end
+            
+            -- If tab is cut off on the left
+            if tabRelativePos < 0 then
+                targetScroll = currentCanvasPos + tabRelativePos - 20
+            end
+            
+            -- Clamp scroll position
+            local maxScroll = math.max(0, window.TabScrollFrame.CanvasSize.X.Offset - scrollFrameWidth)
+            targetScroll = math.max(0, math.min(targetScroll, maxScroll))
+            
+            -- Smooth scroll animation
+            TweenService:Create(window.TabScrollFrame, TweenInfo.new(Config.Animations.Medium, Enum.EasingStyle.Quad), {
                 CanvasPosition = Vector2.new(targetScroll, 0)
             }):Play()
         end
@@ -750,9 +790,15 @@ function NeonUI:CreateTab(window, tabName)
     
     tabButton.MouseButton1Click:Connect(switchToTab)
     
-    -- Add touch support for mobile devices
+    -- Enhanced touch support for mobile devices
     if isMobile then
         tabButton.TouchTap:Connect(switchToTab)
+        -- Additional touch handling for better responsiveness
+        tabButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                switchToTab()
+            end
+        end)
     end
     
     -- If this is the first tab, make it active
@@ -795,3 +841,4 @@ end
 NeonUI.Config = Config
 
 return NeonUI
+print(load v1.0.0)
