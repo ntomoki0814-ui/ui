@@ -340,13 +340,19 @@ function NeonUI:CreateWindow(title, subtitle)
             local newX = startPos.X.Offset + delta.X
             local newY = startPos.Y.Offset + delta.Y
             
-            -- Keep window within screen bounds
+            -- Fixed bounds checking to allow proper vertical movement
             local screenSize = workspace.CurrentCamera.ViewportSize
             local currentWindowWidth = mainFrame.AbsoluteSize.X
             local currentWindowHeight = mainFrame.AbsoluteSize.Y
             
-            newX = math.max(0, math.min(newX, screenSize.X - currentWindowWidth))
-            newY = math.max(0, math.min(newY, screenSize.Y - currentWindowHeight))
+            -- Allow more natural movement - only prevent window from going completely off-screen
+            local minX = -currentWindowWidth + 100  -- Allow most of window to go off left edge
+            local maxX = screenSize.X - 100  -- Allow most of window to go off right edge
+            local minY = -currentWindowHeight + 60   -- Keep title bar visible when going up
+            local maxY = screenSize.Y - 60   -- Keep title bar accessible when going down
+            
+            newX = math.max(minX, math.min(newX, maxX))
+            newY = math.max(minY, math.min(newY, maxY))
             
             mainFrame.Position = UDim2.new(0, newX, 0, newY)
         end
