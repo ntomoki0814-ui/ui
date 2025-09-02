@@ -841,4 +841,3 @@ end
 NeonUI.Config = Config
 
 return NeonUI
-print(load v1.0.0)
