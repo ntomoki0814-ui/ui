@@ -32,7 +32,7 @@ local Config = {
     -- Adjusted mobile sizes to be proportionally smaller, not just width
     Mobile = {
         WindowWidth = 400,
-        WindowHeight = 550,
+        WindowHeight = 520,  -- Reduced from 550
         MinButtonHeight = 50,
         TouchAreaSize = 44,
         SliderHeight = 70
@@ -105,7 +105,19 @@ function NeonUI:CreateWindow(title, subtitle)
     -- Adjusted sizing to be proportionally smaller from original, not just mobile width
     local isMobile = IsMobile()
     local windowWidth = isMobile and Config.Mobile.WindowWidth or 450
-    local windowHeight = isMobile and Config.Mobile.WindowHeight or 500
+    local windowHeight = isMobile and Config.Mobile.WindowHeight or 480  -- Reduced desktop height slightly too
+    
+    -- Fixed initial positioning to ensure window stays within screen bounds
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    local maxX = screenSize.X - windowWidth - 20  -- 20px margin from edge
+    local maxY = screenSize.Y - windowHeight - 20  -- 20px margin from edge
+    
+    local startX = math.min(screenSize.X * 0.5 - windowWidth/2, maxX)
+    local startY = math.min(screenSize.Y * 0.5 - windowHeight/2, maxY)
+    
+    -- Ensure minimum positioning (not off-screen on the left/top)
+    startX = math.max(20, startX)
+    startY = math.max(20, startY)
     
     -- Main Frame
     local mainFrame = Instance.new("Frame")
@@ -113,7 +125,7 @@ function NeonUI:CreateWindow(title, subtitle)
     mainFrame.Parent = screenGui
     mainFrame.BackgroundColor3 = Config.Colors.Background
     mainFrame.Size = UDim2.new(0, windowWidth, 0, windowHeight)
-    mainFrame.Position = UDim2.new(0.5, -windowWidth/2, 0.5, -windowHeight/2)
+    mainFrame.Position = UDim2.new(0, startX, 0, startY)  -- Use calculated safe position
     mainFrame.BorderSizePixel = 0
     
     CreateCorner(mainFrame, 12)
@@ -221,10 +233,20 @@ function NeonUI:CreateWindow(title, subtitle)
     tabScrollFrame.Size = UDim2.new(1, 0, 0, isMobile and 50 or 40)
     tabScrollFrame.Position = UDim2.new(0, 0, 0, titleBar.Size.Y.Offset)
     tabScrollFrame.ScrollingDirection = Enum.ScrollingDirection.X
-    tabScrollFrame.ScrollBarThickness = 4
+    tabScrollFrame.ScrollBarThickness = isMobile and 8 or 4  -- Thicker scrollbar for mobile
     tabScrollFrame.ScrollBarImageColor3 = Config.Colors.Primary
     tabScrollFrame.BorderSizePixel = 0
     tabScrollFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+    tabScrollFrame.ScrollingEnabled = true  -- Explicitly enable scrolling
+    tabScrollFrame.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable  -- Better mobile scrolling behavior
+    
+    -- Added mobile-specific scroll properties
+    if isMobile then
+        tabScrollFrame.ScrollBarImageTransparency = 0.3  -- More visible on mobile
+        tabScrollFrame.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        tabScrollFrame.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+        tabScrollFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    end
     
     local tabContainer = Instance.new("Frame")
     tabContainer.Name = "TabContainer"
@@ -239,10 +261,14 @@ function NeonUI:CreateWindow(title, subtitle)
     tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
     tabLayout.Padding = UDim.new(0, 2)
     
-    -- Update canvas size when tabs are added
+    -- Enhanced canvas size update with proper scrolling
     tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        tabContainer.Size = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 1, 0)
-        tabScrollFrame.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X, 0, 0)
+        local contentWidth = tabLayout.AbsoluteContentSize.X
+        tabContainer.Size = UDim2.new(0, contentWidth, 1, 0)
+        tabScrollFrame.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
+        
+        -- Auto-enable scrolling when content exceeds frame width
+        tabScrollFrame.ScrollingEnabled = contentWidth > tabScrollFrame.AbsoluteSize.X
     end)
     
     -- Modified content frame position to use tabScrollFrame instead of tabContainer
@@ -672,6 +698,11 @@ function NeonUI:CreateTab(window, tabName)
     CreateCorner(tabButton, 6)
     CreateStroke(tabButton, Config.Colors.Primary, 1)
     
+    -- Enhanced mobile touch support for tab buttons
+    if isMobile then
+        tabButton.AutoButtonColor = false  -- Disable default button behavior for better touch control
+    end
+    
     -- Create tab content frame
     local tabContent = Instance.new("ScrollingFrame")
     tabContent.Name = "TabContent_" .. tabName
@@ -697,10 +728,32 @@ function NeonUI:CreateTab(window, tabName)
     
     window.Tabs[tabName] = tab
     
-    -- Tab click functionality
-    tabButton.MouseButton1Click:Connect(function()
+    -- Enhanced tab click functionality with mobile touch support
+    local function switchToTab()
         self:SwitchTab(window, tabName)
-    end)
+        
+        -- Auto-scroll to show active tab on mobile
+        if isMobile and window.TabScrollFrame then
+            local tabPosition = tabButton.AbsolutePosition.X - window.TabScrollFrame.AbsolutePosition.X
+            local scrollFrameWidth = window.TabScrollFrame.AbsoluteSize.X
+            local tabWidth = tabButton.AbsoluteSize.X
+            
+            -- Calculate target scroll position to center the tab
+            local targetScroll = tabPosition - (scrollFrameWidth / 2) + (tabWidth / 2)
+            targetScroll = math.max(0, math.min(targetScroll, window.TabScrollFrame.CanvasSize.X.Offset - scrollFrameWidth))
+            
+            TweenService:Create(window.TabScrollFrame, TweenInfo.new(Config.Animations.Medium), {
+                CanvasPosition = Vector2.new(targetScroll, 0)
+            }):Play()
+        end
+    end
+    
+    tabButton.MouseButton1Click:Connect(switchToTab)
+    
+    -- Add touch support for mobile devices
+    if isMobile then
+        tabButton.TouchTap:Connect(switchToTab)
+    end
     
     -- If this is the first tab, make it active
     if not window.CurrentTab then
