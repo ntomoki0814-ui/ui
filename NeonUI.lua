@@ -28,8 +28,6 @@ if not Player then
     Player = Players.LocalPlayer
 end
 
-local PlayerGui = Player:WaitForChild("PlayerGui")
-
 -- Configuration
 local Config = {
     Colors = {
@@ -118,7 +116,7 @@ function NeonUI:CreateWindow(title, subtitle)
     -- Main ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "NeonUI_" .. title
-    screenGui.Parent = PlayerGui
+    screenGui.Parent = CoreGui
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     -- Adjusted sizing to be proportionally smaller from original, not just mobile width
@@ -197,7 +195,7 @@ function NeonUI:CreateWindow(title, subtitle)
     minimizeButton.BackgroundColor3 = Config.Colors.Primary
     minimizeButton.Size = UDim2.new(0, isMobile and 40 or 30, 0, isMobile and 40 or 30)
     minimizeButton.Position = UDim2.new(1, isMobile and -90 or -80, 0, 10)
-    minimizeButton.Text = "��"
+    minimizeButton.Text = "−"
     minimizeButton.TextColor3 = Config.Colors.Text
     minimizeButton.TextScaled = true
     minimizeButton.Font = Enum.Font.GothamBold
@@ -341,20 +339,6 @@ function NeonUI:CreateWindow(title, subtitle)
             local delta = input.Position - dragStart
             local newX = startPos.X.Offset + delta.X
             local newY = startPos.Y.Offset + delta.Y
-            
-            -- Fixed bounds checking to use same relaxed movement for both minimized and expanded states
-            local screenSize = workspace.CurrentCamera.ViewportSize
-            local currentWindowWidth = mainFrame.AbsoluteSize.X
-            local currentWindowHeight = mainFrame.AbsoluteSize.Y
-            
-            -- Allow more natural movement for both states - only prevent window from going completely off-screen
-            local minX = -currentWindowWidth + 100  -- Allow most of window to go off left edge
-            local maxX = screenSize.X - 100  -- Allow most of window to go off right edge
-            local minY = -currentWindowHeight + 60   -- Keep title bar visible when going up
-            local maxY = screenSize.Y - 60   -- Keep title bar accessible when going down
-            
-            newX = math.max(minX, math.min(newX, maxX))
-            newY = math.max(minY, math.min(newY, maxY))
             
             mainFrame.Position = UDim2.new(0, newX, 0, newY)
         end
